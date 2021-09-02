@@ -22,6 +22,11 @@ A widget for tracking internet usage for mauritians subscribed to myT ISP.
   </p>
 </p>
 
+### Prerequisites
+
+* [.NET Framework 4.7.2](https://dotnet.microsoft.com/download/dotnet-framework/net472)
+
+
 <!-- GETTING STARTED -->
 ## Getting Started
 
