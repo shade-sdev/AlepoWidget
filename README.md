@@ -25,7 +25,7 @@ A widget for tracking internet usage for mauritians subscribed to myT ISP.
 <!-- GETTING STARTED -->
 ## Getting Started
 
-1. Download the ![Release]()
+1. Download the ![Release](https://github.com/shade-sdev/AlepoWSRC/files/7094487/AlepoWSRC.zip)
 2. Run AlepoWSRC.exe, Enter your username and password for the https://internetaccount.myt.mu/ website (Only for first time)
 3. The application resides in the System Tray, double click on its icon from system tray to view the overlay
 4. Click on the volume icon from the overlay to refresh the usage.
