@@ -1,19 +1,10 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
-using System.Linq;
-using System.Reflection;
-using System.Resources;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using System.Web;
 using System.Windows.Forms;
 using ByteSizeLib;
-using Newtonsoft.Json.Linq;
-using OpenQA.Selenium;
-using OpenQA.Selenium.PhantomJS;
 using RestSharp;
 using static AlepoWSRC.Constants;
 using Newtonsoft.Json;
@@ -53,8 +44,6 @@ namespace AlepoWSRC
         private async void getRemainingDataUsage()
         {
             await Task.Run(() => scrapDataUsage());
-            closePhantomJS();
-
 
         }
 
@@ -110,18 +99,7 @@ namespace AlepoWSRC
 
         private void iconPic_Click(object sender, EventArgs e)
         {
-          
-        
             getRemainingDataUsage();
-        }
-
-        private void closePhantomJS()
-        {
-            Process.Start("openkillphantom.vbs");
-
-
-      
-
         }
 
         [DllImport("user32.dll")]
@@ -238,7 +216,6 @@ namespace AlepoWSRC
             var userData = JsonConvert.DeserializeObject<dynamic>(response.Content);
 
             string usage = userData.response[1].convertedBalance;
-
 
             return usage.Substring(0, usage.IndexOf(":"));
         }
