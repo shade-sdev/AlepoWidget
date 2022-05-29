@@ -11,9 +11,12 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Windows.Forms;
 using ByteSizeLib;
+using Newtonsoft.Json.Linq;
 using OpenQA.Selenium;
 using OpenQA.Selenium.PhantomJS;
-
+using RestSharp;
+using static AlepoWSRC.Constants;
+using Newtonsoft.Json;
 
 namespace AlepoWSRC
 {
@@ -35,9 +38,9 @@ namespace AlepoWSRC
           
             SetWindowPos(this.Handle, HWND_TOPMOST, 0, 0, 0, 0, TOPMOST_FLAGS);
             this.Location = new System.Drawing.Point(Screen.PrimaryScreen.Bounds.Right - (this.Width + 30), (Screen.PrimaryScreen.Bounds.Size.Height - this.Height - 80));
-            checkUserCredentials();
 
-           
+            checkUserCredentials();
+            await scrapDataUsage();
             AlepoWSRCTray.ShowBalloonTip(3000, "Usage", await scrapDataUsage(), ToolTipIcon.Info);
         }
 
@@ -60,35 +63,10 @@ namespace AlepoWSRC
             loadProgress.Invoke((Action)(() => loadProgress.Value = 0));
             loadProgress.Invoke((Action)(() => loadProgress.Visible = true));
             loadProgress.Invoke((Action)(() => loadProgress.Value = 25));
-            string dataUsage = "";
-            var driverService = PhantomJSDriverService.CreateDefaultService();
-            driverService.HideCommandPromptWindow = true;
 
-            var driver = new PhantomJSDriver(driverService);
-            loadProgress.Invoke((Action)(() => loadProgress.Value = 50));
-            driver.Navigate().GoToUrl("https://internetaccount.myt.mu/");
-            driver.FindElement(By.Name("signInForm.username")).SendKeys(Constants.username);
-            driver.FindElement(By.Name("signInForm.password")).SendKeys(Constants.password);
-            driver.FindElement(By.Name("signInContainer:submit")).Click();
+            var dataUsage = await this.GetUserDataFromMyT();
           
-            HtmlAgilityPack.HtmlDocument doc = new HtmlAgilityPack.HtmlDocument();
-            doc.LoadHtml(driver.PageSource);
-            try
-            {
-              dataUsage = doc.DocumentNode.SelectSingleNode("//font[@class='tplus_text']//span//label[contains(text(),'Mb')]").InnerText;
-            }catch(System.NullReferenceException e)
-            {
-                clearCredentials();
-                Invoke((Action)delegate
-                {
-                    MessageBox.Show("Invalid Credentials, restart the application.");
-                    Close();
-
-                });
-                
-            }
-          
-            double usage = Double.Parse(dataUsage.Substring(0, dataUsage.IndexOf("Mb")));
+            double usage = Double.Parse(dataUsage);
             lblDataUsage.Invoke((Action)delegate
             {
                 lblDataUsage.Text = ByteSize.FromMegaBytes(usage).ToString();
@@ -96,7 +74,7 @@ namespace AlepoWSRC
                 loadProgress.Invoke((Action)(() => loadProgress.Value = 100));
 
             });
-            await Task.Delay(TimeSpan.FromSeconds(2));
+
             loadProgress.Invoke((Action)(() => loadProgress.Visible = false));
             loadProgress.Invoke((Action)(() => loadProgress.Value = 0));
 
@@ -173,9 +151,99 @@ namespace AlepoWSRC
             AlepoWSRCTray.ShowBalloonTip(3000, "Usage", await scrapDataUsage(), ToolTipIcon.Info);
         }
 
+        private async Task<string> Login()
+        {
+
+            var options = new RestClientOptions(AUTH_URL)
+            {
+                ThrowOnAnyError = true,
+                Timeout = 1000
+            };
+
+            Dictionary<string, string> headers = new Dictionary<string, string>();
+            headers.Add("Content-Type", "application/json");
+
+            var client = new RestClient(options);
+
+            var request = new RestRequest()
+                .AddHeaders(headers)
+                .AddJsonBody(
+                new
+                {
+                    email = USERNAME,
+                    password = PASSWORD,
+                    otp = "",
+                    rememberMe = "",
+                    token = ""
+                });
+
+            var response = await client.PostAsync(request);
+            var tokenResponse = JsonConvert.DeserializeObject<dynamic>(response.Content);
+            return "Bearer "+ tokenResponse.token;
+        }
+
+        private async Task<Dictionary<string, string>> GetUserIdentifier()
+        {
+            var options = new RestClientOptions(USER_IDENTIFIER_URL)
+            {
+                ThrowOnAnyError = true,
+                Timeout = 1000
+            };
+
+            Dictionary<string, string> headers = new Dictionary<string, string>();
+            headers.Add("Authorization", await this.Login());
+
+            var client = new RestClient(options);
+            var request = new RestRequest()
+                .AddHeaders(headers);
+
+            var response = await client.GetAsync(request);
+            var userIdentifierResponse = JsonConvert.DeserializeObject<dynamic>(response.Content);
+
+            string identifierName = userIdentifierResponse[0].subscritionIdentifier;
+            string identifierValue = userIdentifierResponse[0].subscritionIdentifierValue;
+
+            Dictionary<string, string> identifiers = new Dictionary<string, string>();
+            identifiers.Add("identifierName", identifierName.Substring(identifierName.LastIndexOf("-") + 1));
+            identifiers.Add("identifierValue", identifierValue);
+
+            return identifiers;
+        }
+
+        private async Task<string> GetUserDataFromMyT()
+        {
+            var options = new RestClientOptions(USER_DATA_URL)
+            {
+                ThrowOnAnyError = true,
+                Timeout = 1000
+            };
+
+            Dictionary<string, string> headers = new Dictionary<string, string>();
+            headers.Add("Content-Type", "application/json");
+            headers.Add("Authorization", await this.Login());
+
+            Dictionary<string, string> identifiers = await this.GetUserIdentifier();
+
+            var client = new RestClient(options);
+
+            var request = new RestRequest()
+                .AddHeaders(headers)
+                .AddJsonBody(new
+                {
+                    identifierName = identifiers["identifierName"],
+                    identifierValue = identifiers["identifierValue"]
+                });
+
+            var response = await client.PostAsync(request);
+            var userData = JsonConvert.DeserializeObject<dynamic>(response.Content);
+
+            string usage = userData.response[1].convertedBalance;
 
 
+            return usage.Substring(0, usage.IndexOf(":"));
+        }
 
 
     }
+
 }

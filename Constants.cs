@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace AlepoWSRC
 {
-    class Constants
+    static class Constants
     {
-
-        public static string url = "https://internetaccount.myt.mu/";
-        public static string username = ResourceHelper.ReadResource("username");
-        public static string password = ResourceHelper.ReadResource("password");
-
+        public readonly static string AUTH_URL = "https://internetaccount.myt.mu/portal-api/auth/login";
+        public readonly static string USER_DATA_URL = "https://internetaccount.myt.mu/rest-services/selfcare/subscriber/S03086/bankInstanceList";
+        public readonly static string USER_IDENTIFIER_URL = "https://internetaccount.myt.mu/rest-services/selfcare/subscriber/S03086/getSubscriptionIdentifier";
+        public readonly static string USERNAME = ResourceHelper.ReadResource("username");
+        public readonly static string PASSWORD = ResourceHelper.ReadResource("password");
     }
 }
