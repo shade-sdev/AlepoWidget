@@ -18,6 +18,7 @@ namespace AlepoWSRC
         private const UInt32 SWP_NOMOVE = 0x0002;
         private const UInt32 TOPMOST_FLAGS = SWP_NOMOVE | SWP_NOSIZE;
         string usageString = "";
+        private string token = "";
         public AlepoWSRC()
         {
     
@@ -49,6 +50,9 @@ namespace AlepoWSRC
 
         private async Task<string> scrapDataUsage()
         {
+
+            await this.Login();
+
             loadProgress.Invoke((Action)(() => loadProgress.Value = 0));
             loadProgress.Invoke((Action)(() => loadProgress.Visible = true));
             loadProgress.Invoke((Action)(() => loadProgress.Value = 25));
@@ -58,8 +62,8 @@ namespace AlepoWSRC
             double usage = Double.Parse(dataUsage);
             lblDataUsage.Invoke((Action)delegate
             {
-                lblDataUsage.Text = ByteSize.FromMegaBytes(usage).ToString();
-                usageString = ByteSize.FromMegaBytes(usage).ToString();
+                lblDataUsage.Text = ByteSize.FromGigaBytes(usage).ToString();
+                usageString = ByteSize.FromGigaBytes(usage).ToString();
                 loadProgress.Invoke((Action)(() => loadProgress.Value = 100));
 
             });
@@ -67,7 +71,7 @@ namespace AlepoWSRC
             loadProgress.Invoke((Action)(() => loadProgress.Visible = false));
             loadProgress.Invoke((Action)(() => loadProgress.Value = 0));
 
-            return ByteSize.FromMegaBytes(usage).ToString();
+            return ByteSize.FromGigaBytes(usage).ToString();
         }
 
         private void checkUserCredentials()
@@ -129,7 +133,7 @@ namespace AlepoWSRC
             AlepoWSRCTray.ShowBalloonTip(3000, "Usage", await scrapDataUsage(), ToolTipIcon.Info);
         }
 
-        private async Task<string> Login()
+        private async Task Login()
         {
 
             var options = new RestClientOptions(AUTH_URL)
@@ -157,7 +161,7 @@ namespace AlepoWSRC
 
             var response = await client.PostAsync(request);
             var tokenResponse = JsonConvert.DeserializeObject<dynamic>(response.Content);
-            return "Bearer "+ tokenResponse.token;
+            this.token = "Bearer "+ tokenResponse.token;
         }
 
         private async Task<Dictionary<string, string>> GetUserIdentifier()
@@ -169,7 +173,7 @@ namespace AlepoWSRC
             };
 
             Dictionary<string, string> headers = new Dictionary<string, string>();
-            headers.Add("Authorization", await this.Login());
+            headers.Add("Authorization", this.token);
 
             var client = new RestClient(options);
             var request = new RestRequest()
@@ -198,7 +202,7 @@ namespace AlepoWSRC
 
             Dictionary<string, string> headers = new Dictionary<string, string>();
             headers.Add("Content-Type", "application/json");
-            headers.Add("Authorization", await this.Login());
+            headers.Add("Authorization", this.token);
 
             Dictionary<string, string> identifiers = await this.GetUserIdentifier();
 
